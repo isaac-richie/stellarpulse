@@ -1,0 +1,12 @@
+node_modules
+.env
+.env.*
+.DS_Store
+.next
+.dist
+apps/api/dist
+apps/web/.next
+apps/web/out
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
