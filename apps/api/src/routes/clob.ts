@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { clobAuth, clobCreateApiKey, getClobPublic, postClobPublic } from "../services/polymarket.js";
+import { buildCacheKey, getJsonCache, setJsonCache } from "../services/cache.js";
 
 const clobQuerySchema = z.record(z.string()).default({});
 
@@ -38,12 +39,22 @@ export async function clobRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/clob/book", async (req) => {
     const query = clobQuerySchema.parse(req.query ?? {});
-    return getClobPublic("/book", query);
+    const cacheKey = buildCacheKey("clob:book", query);
+    const cached = await getJsonCache(cacheKey);
+    if (cached) return cached;
+    const book = await getClobPublic("/book", query);
+    await setJsonCache(cacheKey, book, 3);
+    return book;
   });
 
   app.get("/clob/markets", async (req) => {
     const query = clobQuerySchema.parse(req.query ?? {});
     return getClobPublic("/markets", query);
+  });
+
+  app.get("/clob/prices-history", async (req) => {
+    const query = clobQuerySchema.parse(req.query ?? {});
+    return getClobPublic("/prices-history", query);
   });
 
   app.post("/clob/last-trades-prices", async (req, reply) => {

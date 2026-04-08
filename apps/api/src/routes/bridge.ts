@@ -13,7 +13,7 @@ export async function bridgeRoutes(app: FastifyInstance): Promise<void> {
       reply.status(400);
       return { error: "missing_body" };
     }
-    return postQuote(body);
+    return postQuote(body as any);
   });
 
   app.post("/bridge/deposit", async (req, reply) => {
@@ -22,7 +22,7 @@ export async function bridgeRoutes(app: FastifyInstance): Promise<void> {
       reply.status(400);
       return { error: "missing_body" };
     }
-    return postDeposit(body);
+    return postDeposit(body as any);
   });
 
   app.post("/bridge/withdraw", async (req, reply) => {
@@ -31,7 +31,7 @@ export async function bridgeRoutes(app: FastifyInstance): Promise<void> {
       reply.status(400);
       return { error: "missing_body" };
     }
-    return postWithdraw(body);
+    return postWithdraw(body as any);
   });
 
   app.get<{ Params: { address: string } }>("/bridge/status/:address", async (req) => {

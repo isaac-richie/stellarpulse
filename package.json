@@ -1,13 +1,19 @@
 {
   "name": "smartmarket",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm -w @smartmarket/api run dev & npm -w @smartmarket/web run dev",
     "dev:api": "npm -w @smartmarket/api run dev",
     "dev:web": "npm -w @smartmarket/web run dev",
-    "build": "npm -w @smartmarket/api run build && npm -w @smartmarket/web run build",
-    "start": "npm -w @smartmarket/api run start && npm -w @smartmarket/web run start",
+    "build": "npm -w @smartmarket/types run build && npm -w @smartmarket/config run build && npm -w @smartmarket/polymarket-sdk run build && npm -w @smartmarket/api run build && npm -w @smartmarket/web run build",
+    "start": "concurrently -k -n api,web \"npm -w @smartmarket/api run start\" \"npm -w @smartmarket/web run start\"",
     "test": "npm -w @smartmarket/api run test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
   }
 }

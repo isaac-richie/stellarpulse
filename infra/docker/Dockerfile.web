@@ -1,0 +1,8 @@
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/web ./apps/web
+COPY packages ./packages
+RUN npm install --omit=dev
+WORKDIR /app/apps/web
+CMD ["npm", "run", "start"]
