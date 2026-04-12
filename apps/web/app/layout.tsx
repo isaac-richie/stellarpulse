@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers";
@@ -18,15 +18,18 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "rwaanalytics — Prediction Markets",
+  title: "StellarPulse — Prediction Events",
   description:
-    "Trade real-world outcomes on a premium prediction market interface.",
-  keywords: ["prediction market", "rwaanalytics", "DeFi", "trading"],
+    "Stellar-native prediction event terminal with real-time events and premium analysis.",
+  keywords: ["prediction event", "stellarpulse", "Stellar", "x402", "trading"],
   openGraph: {
-    title: "rwaanalytics — Prediction Markets",
-    description: "Trade real-world outcomes on a premium prediction market interface.",
+    title: "StellarPulse — Prediction Events",
+    description: "Stellar-native prediction event terminal with real-time events and premium analysis.",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
   themeColor: "#F0B90B",
 };
 

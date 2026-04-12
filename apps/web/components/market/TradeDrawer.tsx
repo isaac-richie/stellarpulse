@@ -56,7 +56,7 @@ export const TradeDrawer = ({ isOpen, onClose, market, children }: TradeDrawerPr
                             {market && (
                                 <div className="space-y-4">
                                     <header className="space-y-1">
-                                        <Badge variant="neutral" className="mb-2">Prediction Market</Badge>
+                                        <Badge variant="neutral" className="mb-2">Prediction Event</Badge>
                                         <h3 className="text-lg font-bold leading-tight">{market.title}</h3>
                                     </header>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { BookmarkPlus, Clock, TrendingUp, TrendingDown, Zap } from "lucide-react"
+import { BookmarkPlus, Clock, TrendingUp, Zap, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PolymarketMarket } from "@/lib/polymarket"
 
@@ -39,11 +39,11 @@ function ProbabilityBar({ outcomes }: { outcomes: PolymarketMarket["outcomes"] }
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold text-[oklch(0.68_0.18_155)]">
-            YES {yes}%
+          <span className="font-bold tracking-wider text-[oklch(0.68_0.18_155)]">
+            CONSENSUS {yes}%
           </span>
-          <span className="text-muted-foreground font-medium">
-            NO {no.toFixed(1)}%
+          <span className="text-muted-foreground font-medium tracking-wide">
+            ALT-SIGNAL {no.toFixed(1)}%
           </span>
         </div>
         <div className="relative h-1.5 rounded-full bg-[oklch(0.22_0.015_255)] overflow-hidden">
@@ -88,17 +88,12 @@ function ProbabilityBar({ outcomes }: { outcomes: PolymarketMarket["outcomes"] }
 interface TradingCardProps {
   market: PolymarketMarket
   index: number
-  onQuickTrade?: (market: PolymarketMarket, side: "yes" | "no") => void
+  onUnlockAnalysis?: (market: PolymarketMarket) => void
 }
 
-export function TradingCard({ market, index, onQuickTrade }: TradingCardProps) {
+export function TradingCard({ market, index, onUnlockAnalysis }: TradingCardProps) {
   const router = useRouter()
   const [bookmarked, setBookmarked] = useState(false)
-
-  const yesPrice = market.outcomes.find((o) => o.name.toLowerCase().includes("yes"))?.price ??
-    market.outcomes[0]?.price ?? 50
-  const noPrice = 100 - yesPrice
-  const isHotMarket = parseFloat(market.volume.replace(/[$KMB]/g, "")) > 5
 
   const animDelay = Math.min(index * 60, 600)
 
@@ -106,7 +101,13 @@ export function TradingCard({ market, index, onQuickTrade }: TradingCardProps) {
     <article
       className="card-enter group surface-card surface-card-hover rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:shadow-[0_8px_40px_oklch(0.08_0.01_260)] hover:-translate-y-0.5"
       style={{ animationDelay: `${animDelay}ms`, animationFillMode: "both" }}
-      onClick={() => router.push(`/markets/${market.id}`)}
+      onClick={() => {
+        if (market.source === "kalshi") {
+          onUnlockAnalysis?.(market)
+          return
+        }
+        router.push(`/markets/${market.id}`)
+      }}
     >
       {/* Card top image / gradient banner */}
       <div className="relative h-24 bg-[oklch(0.16_0.014_255)] overflow-hidden flex-shrink-0">
@@ -173,11 +174,11 @@ export function TradingCard({ market, index, onQuickTrade }: TradingCardProps) {
         {/* Stats row */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-[oklch(0.22_0.015_255)]">
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Network Intensity (M2M Flow)">
               <TrendingUp className="w-3 h-3 text-[oklch(0.78_0.16_82)]" />
               <span className="font-mono text-[oklch(0.65_0.01_90)] font-medium">{market.volume}</span>
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Agency Depth (Liquidity Ready)">
               <span className="w-1.5 h-1.5 rounded-full bg-[oklch(0.68_0.18_155)]" />
               <span className="font-mono text-[oklch(0.55_0.01_90)]">{market.liquidity}</span>
             </span>
@@ -188,39 +189,20 @@ export function TradingCard({ market, index, onQuickTrade }: TradingCardProps) {
           </span>
         </div>
 
-        {/* Buy buttons */}
-        <div className="grid grid-cols-2 gap-2 mt-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onQuickTrade?.(market, "yes")
-            }}
-            className={cn(
-              "flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 border",
-              "bg-[oklch(0.68_0.18_155/0.1)] border-[oklch(0.68_0.18_155/0.3)] text-[oklch(0.68_0.18_155)] hover:bg-[oklch(0.68_0.18_155/0.2)] hover:border-[oklch(0.68_0.18_155/0.5)]"
-            )}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            Buy YES {yesPrice}¢
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onQuickTrade?.(market, "no")
-            }}
-            className={cn(
-              "flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 border",
-              "bg-[oklch(0.58_0.2_25/0.1)] border-[oklch(0.58_0.2_25/0.3)] text-[oklch(0.58_0.2_25)] hover:bg-[oklch(0.58_0.2_25/0.2)] hover:border-[oklch(0.58_0.2_25/0.5)]"
-            )}
-          >
-            <TrendingDown className="w-3.5 h-3.5" />
-            Buy NO {noPrice.toFixed(0)}¢
-          </button>
+        <div className="rounded-xl border border-[oklch(0.22_0.015_255)] bg-[oklch(0.16_0.014_255)] px-3 py-2 text-[11px] text-muted-foreground">
+          Analysis focus: no live order execution in this interface.
         </div>
 
-        <p className="text-[10px] text-muted-foreground">
-          Instant execution via Polymarket liquidity
-        </p>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onUnlockAnalysis?.(market)
+          }}
+          className="w-full rounded-xl border border-[oklch(0.78_0.16_82/0.35)] bg-[oklch(0.78_0.16_82/0.12)] px-3 py-2 text-xs font-bold uppercase tracking-widest text-[oklch(0.86_0.12_82)] hover:bg-[oklch(0.78_0.16_82/0.2)] transition flex items-center justify-center gap-2"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          Extract Alpha Signal [$0.05]
+        </button>
       </div>
     </article>
   )

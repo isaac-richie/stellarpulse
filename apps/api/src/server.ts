@@ -1,24 +1,48 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
+import { analysisRoutes } from "./routes/analysis.js";
 import { bridgeRoutes } from "./routes/bridge.js";
 import { clobRoutes } from "./routes/clob.js";
 import { gammaRoutes } from "./routes/gamma.js";
 import { geoblockRoutes } from "./routes/geoblock.js";
 import { healthRoutes } from "./routes/health.js";
+import { kalshiRoutes } from "./routes/kalshi.js";
 import { orderRoutes } from "./routes/orders.js";
 import { portfolioRoutes } from "./routes/portfolio.js";
 import { wsRoutes } from "./routes/ws.js";
+import { catalystRoutes } from "./routes/catalyst.js";
+import { agentRoutes } from "./routes/agent.js";
 
 export function buildServer() {
   const app = Fastify({ logger: true });
 
   app.register(cors, {
-    origin: true
+    origin: true,
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "PAYMENT-SIGNATURE",
+      "X-PAYMENT",
+      "payment-signature",
+      "x-payment",
+      "Access-Control-Expose-Headers",
+      "access-control-expose-headers"
+    ],
+    exposedHeaders: [
+      "PAYMENT-REQUIRED",
+      "PAYMENT-RESPONSE",
+      "X-PAYMENT-RESPONSE",
+      "payment-required",
+      "payment-response",
+      "x-payment-response"
+    ]
   });
   app.register(websocket);
 
   app.register(healthRoutes);
+  app.register(kalshiRoutes);
+  app.register(analysisRoutes);
   app.register(geoblockRoutes);
   app.register(bridgeRoutes);
   app.register(gammaRoutes);
@@ -26,6 +50,8 @@ export function buildServer() {
   app.register(orderRoutes);
   app.register(portfolioRoutes);
   app.register(wsRoutes);
+  app.register(catalystRoutes);
+  app.register(agentRoutes);
 
   app.setErrorHandler((err, _req, reply) => {
     app.log.error(err);

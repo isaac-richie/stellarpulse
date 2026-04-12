@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { RefreshCw, Wallet, AlertCircle } from "lucide-react";
+import { ethers } from "ethers";
 
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -20,18 +20,33 @@ type PortfolioResponse = {
 };
 
 export default function PortfolioPage() {
-  const { ready, authenticated } = usePrivy();
-  const { wallets } = useWallets();
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [data, setData] = useState<PortfolioResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const connectWallet = async () => {
+    try {
+      if (typeof window === "undefined" || !(window as any).ethereum) {
+        setError("No wallet found. Install MetaMask or compatible wallet.");
+        return;
+      }
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      setWalletAddress(await signer.getAddress());
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message ?? "Wallet connection failed");
+    }
+  };
+
   const loadPortfolio = async () => {
-    if (!authenticated || !wallets[0]) return;
+    if (!walletAddress) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/portfolio/${wallets[0].address}`);
+      const res = await fetch(`${API_BASE}/portfolio/${walletAddress}`);
       if (!res.ok) throw new Error("Failed to load portfolio");
       const payload = (await res.json()) as PortfolioResponse;
       setData(payload);
@@ -45,7 +60,7 @@ export default function PortfolioPage() {
   useEffect(() => {
     loadPortfolio();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, wallets]);
+  }, [walletAddress]);
 
   const summary = useMemo(() => {
     const value = data?.value ?? {};
@@ -74,12 +89,10 @@ export default function PortfolioPage() {
     return numeric.toFixed(2);
   };
 
-  if (!ready) return null;
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-10 pb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Portfolio</h1>
@@ -96,13 +109,16 @@ export default function PortfolioPage() {
           </Button>
         </div>
 
-        {!authenticated ? (
+        {!walletAddress ? (
           <div className="surface-card rounded-2xl p-6 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-[oklch(0.18_0.014_255)] border border-[oklch(0.22_0.015_255)] flex items-center justify-center">
               <Wallet className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Connect your wallet to view positions.</p>
+              <Button variant="secondary" onClick={connectWallet} className="mt-3">
+                Connect Wallet
+              </Button>
             </div>
           </div>
         ) : null}

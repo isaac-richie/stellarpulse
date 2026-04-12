@@ -13,11 +13,19 @@ import {
   BarChart2,
   Sparkles,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000"
 
-const polymarketCategories = [
+type CategoryItem = {
+  id: string
+  label: string
+  icon: LucideIcon
+  count?: number
+}
+
+const polymarketCategories: CategoryItem[] = [
   { id: "all", label: "All", icon: Flame },
   { id: "Politics", label: "Politics", icon: Landmark },
   { id: "Sports", label: "Sports", icon: Trophy },
@@ -29,6 +37,8 @@ const polymarketCategories = [
   { id: "Culture", label: "Culture", icon: Sparkles },
   { id: "Economy", label: "Economy", icon: BarChart2 },
   { id: "Weather & Science", label: "Weather & Science", icon: CloudLightning },
+  { id: "Health", label: "Health", icon: Microscope },
+  { id: "Breaking News", label: "Breaking News", icon: Flame },
   { id: "Mentions", label: "Mentions", icon: Microscope },
   { id: "Elections", label: "Elections", icon: Landmark },
 ]
@@ -52,8 +62,8 @@ type GammaTag = {
 export function CategoriesBar({
   selected,
   onSelect,
-  sortBy,
-  onSortChange,
+  sortBy: _sortBy,
+  onSortChange: _onSortChange,
 }: CategoriesBarProps) {
   // sort/filter UI removed
   const [tags, setTags] = useState<GammaTag[]>([])

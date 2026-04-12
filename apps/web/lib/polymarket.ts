@@ -3,6 +3,7 @@
 
 export interface PolymarketMarket {
   id: string
+  source?: "polymarket" | "kalshi"
   question: string
   description?: string
   image?: string
@@ -79,6 +80,28 @@ export interface GammaEventRaw {
 
 const GAMMA_API = "https://gamma-api.polymarket.com"
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000"
+
+const categoryNeedles: Record<string, string[]> = {
+  politics: ["politics", "elections", "government", "policy", "white house", "congress"],
+  crypto: ["crypto", "bitcoin", "ethereum", "solana", "defi", "altcoin"],
+  economy: ["economy", "economic", "macro", "inflation", "rates", "gdp", "recession", "jobs"],
+  sports: ["sports", "nba", "nfl", "mlb", "nhl", "soccer", "football", "ufc", "tennis", "f1"],
+  geopolitics: ["geopolitics", "geopolitical", "war", "sanctions", "nato", "iran", "china", "russia", "israel"],
+  weather: ["weather", "climate", "science", "temperature", "storm", "hurricane", "rainfall"],
+  "weather & science": ["weather", "climate", "science", "temperature", "storm", "hurricane", "rainfall"],
+  health: ["health", "healthcare", "public health", "cdc", "hhs", "medical", "disease", "vaccine"],
+  "breaking news": ["breaking", "live", "news", "urgent"],
+}
+
+function normalizeCategory(category?: string) {
+  return (category ?? "all").trim().toLowerCase()
+}
+
+function getCategoryNeedles(category?: string): string[] {
+  const normalized = normalizeCategory(category)
+  if (normalized === "all") return []
+  return categoryNeedles[normalized] ?? [normalized]
+}
 
 function formatVolume(v: number | string): string {
   const n = typeof v === "string" ? parseFloat(v) : v
@@ -169,7 +192,11 @@ export async function fetchPolymarketMarkets(
         tech: "Tech",
         culture: "Culture",
         economy: "Economy",
+        economic: "Economy",
+        weather: "Climate & Science",
         "weather & science": "Weather & Science",
+        health: "Health",
+        "breaking news": "Breaking",
         mentions: "Mentions",
         elections: "Elections",
         "science & tech": "Science & Tech",
@@ -207,7 +234,11 @@ export async function fetchPolymarketMarkets(
           tech: "Tech",
           culture: "Culture",
           economy: "Economy",
+          economic: "Economy",
+          weather: "Climate & Science",
           "weather & science": "Weather & Science",
+          health: "Health",
+          "breaking news": "Breaking",
           mentions: "Mentions",
           elections: "Elections",
           "science & tech": "Science & Tech",
@@ -216,21 +247,30 @@ export async function fetchPolymarketMarkets(
         return categoryMap[category.toLowerCase()] ?? category
       })()
       : null
+    const needles = getCategoryNeedles(category)
 
     const now = Date.now()
     const deduped: GammaMarketRaw[] = []
     for (const event of events) {
       const eventTags = event.tags?.map((t) => t.label) ?? []
-      if (
-        mappedCategory &&
-        !eventTags.some((t) => t.toLowerCase() === mappedCategory.toLowerCase())
-      ) {
-        continue
-      }
       const markets = event.markets ?? []
       const primary =
         markets.find((m) => (m.active ?? true) && !m.closed) ?? markets[0]
       if (!primary) continue
+      if (mappedCategory) {
+        const haystack = [
+          ...eventTags,
+          event.category ?? "",
+          event.title ?? "",
+          primary.category ?? "",
+          primary.question ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+        const tagMatch = eventTags.some((t) => t.toLowerCase() === mappedCategory.toLowerCase())
+        const fuzzyMatch = needles.length > 0 ? needles.some((needle) => haystack.includes(needle.toLowerCase())) : false
+        if (!tagMatch && !fuzzyMatch) continue
+      }
       const endDate = primary.endDate ?? primary.end_date_iso ?? event.endDate
       if (endDate) {
         const endMs = new Date(endDate).getTime()
@@ -266,8 +306,14 @@ export async function fetchPolymarketMarkets(
         })
       : deduped
 
+    if (!search && mappedCategory && filteredBySearch.length === 0) {
+      const fallbackQuery = needles[0] ?? mappedCategory
+      return fetchPolymarketMarkets("all", limit, sortBy, offset, fallbackQuery)
+    }
+
     return filteredBySearch.slice(0, limit).map((m) => ({
       id: m.id,
+      source: "polymarket" as const,
       question: m.question,
       description: m.description,
       image: m.image,

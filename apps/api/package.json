@@ -7,13 +7,18 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sponsor-agent": "tsx src/scripts/sponsor-agent.ts",
+    "activate-agent": "tsx src/scripts/activate-agent.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/websocket": "^11.2.0",
     "@smartmarket/config": "*",
     "@smartmarket/polymarket-sdk": "*",
+    "@x402/core": "^2.9.0",
+    "@x402/stellar": "^2.9.0",
+    "dotenv": "^16.6.1",
     "fastify": "^5.8.2",
     "ioredis": "^5.4.1",
     "ws": "^8.17.1",

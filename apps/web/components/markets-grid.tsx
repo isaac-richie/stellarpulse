@@ -3,17 +3,17 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
 import { TradingCard } from "./trading-card"
-import { fetchPolymarketMarkets } from "@/lib/polymarket"
+import { fetchMarkets } from "@/lib/markets"
 import type { PolymarketMarket } from "@/lib/polymarket"
 
 interface MarketsGridProps {
   category: string
   sortBy: string
   search?: string
-  onQuickTrade?: (market: PolymarketMarket, side: "yes" | "no") => void
+  onUnlockAnalysis?: (market: PolymarketMarket) => void
 }
 
-export function MarketsGrid({ category, sortBy, search, onQuickTrade }: MarketsGridProps) {
+export function MarketsGrid({ category, sortBy, search, onUnlockAnalysis }: MarketsGridProps) {
   const [markets, setMarkets] = useState<PolymarketMarket[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -31,7 +31,7 @@ export function MarketsGrid({ category, sortBy, search, onQuickTrade }: MarketsG
       try {
         const limit = 12
         const offset = reset ? 0 : nextPage * limit
-        const data = await fetchPolymarketMarkets(category, limit, sortBy, offset, search)
+        const data = await fetchMarkets(category, limit, sortBy, offset, search)
 
         if (fetchKey.current !== key) return
 
@@ -45,7 +45,7 @@ export function MarketsGrid({ category, sortBy, search, onQuickTrade }: MarketsG
         setHasMore(data.length === limit)
       } catch (err) {
         if (fetchKey.current !== key) return
-        setError("Failed to load markets. Please try again.")
+        setError("Failed to load events. Please try again.")
       } finally {
         if (fetchKey.current === key) setLoading(false)
       }
@@ -97,11 +97,34 @@ export function MarketsGrid({ category, sortBy, search, onQuickTrade }: MarketsG
     )
   }
 
+  if (!loading && filteredMarkets.length === 0) {
+    const normalized = category.toLowerCase()
+    const categoryLabel = category === "all" ? "All Events" : category
+    const isUpstreamSparse =
+      normalized === "health" || normalized === "weather & science" || normalized === "breaking news"
+
+    return (
+      <div className="surface-card rounded-2xl p-8 text-center border border-[oklch(0.22_0.015_255)]">
+        <p className="text-sm font-semibold text-foreground">No active events in {categoryLabel} right now.</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          {isUpstreamSparse
+            ? "This category is currently sparse on the upstream feed. Try All, Politics, Sports, or Geopolitics for live activity."
+            : "Try a broader category or remove your search term to see more results."}
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredMarkets.map((market, i) => (
-          <TradingCard key={market.id} market={market} index={i} onQuickTrade={onQuickTrade} />
+          <TradingCard
+            key={market.id}
+            market={market}
+            index={i}
+            onUnlockAnalysis={onUnlockAnalysis}
+          />
         ))}
       </div>
 
@@ -117,7 +140,7 @@ export function MarketsGrid({ category, sortBy, search, onQuickTrade }: MarketsG
             ) : (
               <RefreshCw className="w-4 h-4" />
             )}
-            {loading ? "Loading..." : "Load More Markets"}
+            {loading ? "Loading..." : "Load More Events"}
           </button>
         </div>
       )}

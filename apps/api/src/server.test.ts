@@ -37,5 +37,33 @@ describe("api routes", () => {
     const res = await app.inject({ method: "GET", url: "/clob/markets" });
     expect(ok(res.statusCode)).toBe(true);
     expect(() => res.json()).not.toThrow();
+  }, 15000);
+
+  it("analysis requires payment proof", async () => {
+    const app = buildServer();
+    const res = await app.inject({
+      method: "POST",
+      url: "/analysis/unlock",
+      payload: {
+        actorType: "user",
+        market: {
+          id: "m1",
+          question: "Will BTC close above $100k this year?",
+          outcomes: [{ name: "Yes", price: 54 }, { name: "No", price: 46 }]
+        }
+      }
+    });
+    expect(res.statusCode).toBe(402);
+    expect(res.json().error).toBe("payment_required");
+  });
+
+  it("analysis quote advertises x402 requirements", async () => {
+    const app = buildServer();
+    const res = await app.inject({ method: "GET", url: "/analysis/quote" });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.x402Version).toBe(2);
+    expect(Array.isArray(body.accepts)).toBe(true);
+    expect(body.accepts.length).toBeGreaterThan(0);
   });
 });

@@ -123,3 +123,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Agent Economic HUD Scan-line ─── */
+.hud-scanline {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    oklch(0.78 0.16 82 / 0.08) 2px,
+    oklch(0.78 0.16 82 / 0.08) 4px
+  );
+  animation: hud-scan 4s linear infinite;
+}
+
+@keyframes hud-scan {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(20px); }
+}
+
+/* ─── Network Activity Ticker ─── */
+.ticker-scroll {
+  animation: ticker-slide 40s linear infinite;
+}
+.ticker-scroll:hover {
+  animation-play-state: paused;
+}
+@keyframes ticker-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+

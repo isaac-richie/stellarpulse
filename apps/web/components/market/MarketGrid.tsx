@@ -29,7 +29,7 @@ export const MarketGrid = ({ markets, loading, onMarketSelect, onQuickYes, onQui
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                     <Activity size={24} className="opacity-20" />
                 </div>
-                <p className="text-sm font-medium">No active markets found in this category.</p>
+                <p className="text-sm font-medium">No active events found in this category.</p>
             </div>
         );
     }

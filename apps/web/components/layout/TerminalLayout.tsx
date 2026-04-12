@@ -30,7 +30,7 @@ export const TerminalLayout = ({
                         <div className="w-8 h-8 rounded-lg bg-accent-primary flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
                             <span className="font-outfit font-black text-white text-lg">S</span>
                         </div>
-                        <span className="font-outfit font-bold text-lg tracking-tight">SmartMarket</span>
+                        <span className="font-outfit font-bold text-lg tracking-tight">StellarPulse</span>
                     </div>
 
                     <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-white/[0.03] border border-white/[0.05] rounded-full">
@@ -41,7 +41,7 @@ export const TerminalLayout = ({
 
                 <div className="flex items-center gap-4">
                     <div className="hidden lg:flex items-center gap-6 mr-6">
-                        <Link href="/" className="text-xs font-bold text-ink-muted hover:text-white transition-colors uppercase tracking-widest">Markets</Link>
+                        <Link href="/" className="text-xs font-bold text-ink-muted hover:text-white transition-colors uppercase tracking-widest">Events</Link>
                         <Link href="/portfolio" className="text-xs font-bold text-ink-muted hover:text-white transition-colors uppercase tracking-widest">Portfolio</Link>
                     </div>
                     <Button variant="secondary" size="sm" className="hidden sm:flex">
@@ -74,7 +74,7 @@ export const TerminalLayout = ({
                         <div className="relative w-64 hidden md:block">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                             <input
-                                placeholder="Search markets..."
+                                placeholder="Search events..."
                                 className="w-full bg-bg-elevated border border-white/5 rounded-lg pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-accent-primary/30 transition-all font-medium"
                             />
                         </div>
@@ -94,7 +94,7 @@ export const TerminalLayout = ({
             {/* Global Footer */}
             <footer className="h-12 border-t border-white/[0.04] bg-bg-surface flex items-center justify-between px-6">
                 <div className="flex items-center gap-4 text-[10px] font-bold text-ink-muted uppercase tracking-[0.2em]">
-                    <span>© 2024 SmartMarket Protocol</span>
+                    <span>© 2024 StellarPulse Protocol</span>
                     <span className="text-white/10">•</span>
                     <span>Open Liquidity Infrastructure</span>
                 </div>

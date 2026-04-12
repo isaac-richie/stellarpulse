@@ -2,31 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ethers } from "ethers";
-import { ClobClient, OrderType, Side } from "@polymarket/clob-client";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import {
-  ArrowLeft,
-  Info,
-  TrendingUp,
-  ShieldCheck,
-  Clock,
-  BarChart3,
-  CandlestickChart,
-  Layers,
-  BookOpen,
-} from "lucide-react";
+import { ArrowLeft, Clock, ShieldCheck, TrendingUp } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { TradingChart } from "@/components/charts/TradingChart";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { AnalysisUnlockModal } from "@/components/analysis-unlock-modal";
+import type { PolymarketMarket } from "@/lib/polymarket";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
-const CLOB_HOST = "https://clob.polymarket.com";
-const POLYGON_CHAIN_ID = 137;
 
 interface MarketDetail {
   id: string;
@@ -39,26 +24,17 @@ interface MarketDetail {
   endsAt?: string;
   volume24h?: string;
   liquidity?: string;
+  description?: string;
 }
-
-type OrderTypeTab = "market" | "limit";
-
-type SideTab = "buy" | "sell";
 
 export default function MarketDetailPage() {
   const params = useParams();
   const router = useRouter();
   const marketId = Array.isArray(params?.id) ? params?.id[0] : params?.id;
-  const { authenticated } = usePrivy();
-  const { wallets } = useWallets();
 
   const [market, setMarket] = useState<MarketDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedOutcome, setSelectedOutcome] = useState(0);
-  const [orderSize, setOrderSize] = useState("10");
-  const [tradeStatus, setTradeStatus] = useState<string | null>(null);
-  const [sideTab, setSideTab] = useState<SideTab>("buy");
-  const [orderType, setOrderType] = useState<OrderTypeTab>("market");
+  const [analysisOpen, setAnalysisOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -71,7 +47,8 @@ export default function MarketDetailPage() {
         setMarket({
           id: m.id,
           title: m.question,
-          category: m.category || "Markets",
+          description: m.description,
+          category: m.category || "Events",
           outcomes: m.outcomes || ["Yes", "No"],
           prices: Array.isArray(m.outcomePrices) ? m.outcomePrices.map(Number) : [],
           tokenIds: m.clobTokenIds || [],
@@ -89,43 +66,37 @@ export default function MarketDetailPage() {
     load();
   }, [marketId]);
 
-  const handleSubmit = async (side: Side) => {
-    if (!authenticated || !wallets[0]) return;
-    try {
-      setTradeStatus("Initializing...");
-      const provider = await wallets[0].getEthereumProvider();
-      const web3Provider = new ethers.BrowserProvider(provider);
-      const signer = await web3Provider.getSigner();
+  const normalizedPrices = useMemo(() => (market?.prices?.length ?? 0) >= 2 ? market!.prices : [0.5, 0.5], [market]);
+  const chartTokenId = market?.tokenIds?.[0];
 
-      const tokenId = market?.tokenIds[selectedOutcome];
-      if (!tokenId) throw new Error("Token ID mismatch");
-
-      const client = new ClobClient(CLOB_HOST, POLYGON_CHAIN_ID, signer as any);
-      const creds = await client.createOrDeriveApiKey();
-      const authed = new ClobClient(CLOB_HOST, POLYGON_CHAIN_ID, signer as any, creds);
-
-      await authed.createAndPostOrder(
-        {
-          tokenID: tokenId,
-          price: market?.prices[selectedOutcome] ?? 0.5,
-          side: side,
-          size: Number(orderSize),
-        },
-        {},
-        OrderType.GTC
-      );
-
-      setTradeStatus("Trade submitted");
-    } catch (err: any) {
-      setTradeStatus(`Error: ${err.message}`);
-    }
-  };
+  const analysisMarket: PolymarketMarket | null = market
+    ? {
+        id: market.id,
+        question: market.title,
+        category: market.category,
+        description: market.description,
+        volume: market.volume24h ?? "$--",
+        liquidity: market.liquidity ?? "$--",
+        endDate: market.endsAt ?? "",
+        image: market.image,
+        icon: market.image,
+        outcomes: [
+          { name: market.outcomes?.[0] ?? "Yes", price: (normalizedPrices[0] ?? 0.5) * 100 },
+          { name: market.outcomes?.[1] ?? "No", price: (normalizedPrices[1] ?? 0.5) * 100 },
+        ],
+        tokenIds: market.tokenIds,
+        active: true,
+        new: false,
+        featured: false,
+        slug: market.id,
+      }
+    : null;
 
   if (loading || !market) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="w-12 h-12 border-4 border-[oklch(0.78_0.16_82)] border-t-transparent rounded-full animate-spin" />
           </div>
@@ -135,23 +106,19 @@ export default function MarketDetailPage() {
     );
   }
 
-  const normalizedPrices = market.prices.length >= 2 ? market.prices : [0.5, 0.5];
-  const chartTokenId = market.tokenIds?.[0];
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-20">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-20">
         <div className="pt-6 pb-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft size={14} /> Back to markets
+            <ArrowLeft size={14} /> Back to events
           </button>
         </div>
 
-        {/* Header */}
         <div className="surface-card rounded-2xl p-6 mb-6">
           <div className="flex items-start gap-4">
             {market.image ? (
@@ -172,45 +139,29 @@ export default function MarketDetailPage() {
               <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Yes price</div>
               <div className="text-lg font-bold text-foreground mt-1">{normalizedPrices[0].toFixed(2)}¢</div>
               <div className="text-xs text-[oklch(0.68_0.18_155)] flex items-center gap-1 mt-1">
-                <TrendingUp className="w-3 h-3" /> +4.2%
+                <TrendingUp className="w-3 h-3" /> Live consensus
               </div>
             </div>
             <div className="surface-card rounded-xl p-4">
               <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">24h change</div>
-              <div className="text-lg font-bold text-foreground mt-1">+4.2%</div>
+              <div className="text-lg font-bold text-foreground mt-1">Live</div>
             </div>
             <div className="surface-card rounded-xl p-4">
               <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Liquidity</div>
               <div className="text-lg font-bold text-foreground mt-1">{market.liquidity}</div>
             </div>
             <div className="surface-card rounded-xl p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Volume</div>
-              <div className="text-lg font-bold text-foreground mt-1">{market.volume24h}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Closes</div>
+              <div className="text-lg font-bold text-foreground mt-1">{market.endsAt || "—"}</div>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Chart */}
           <div className="lg:col-span-8 space-y-6">
             <div className="surface-card rounded-2xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Market chart</div>
-                  <div className="text-lg font-semibold text-foreground mt-1">{normalizedPrices[0].toFixed(2)}¢</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[oklch(0.22_0.04_82)] text-[oklch(0.78_0.16_82)] border border-[oklch(0.78_0.16_82/0.4)]">
-                    <CandlestickChart className="w-3.5 h-3.5" /> Candles
-                  </button>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[oklch(0.16_0.014_255)] text-muted-foreground border border-[oklch(0.22_0.015_255)]">
-                    <Layers className="w-3.5 h-3.5" /> Depth
-                  </button>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[oklch(0.16_0.014_255)] text-muted-foreground border border-[oklch(0.22_0.015_255)]">
-                    <BookOpen className="w-3.5 h-3.5" /> Book
-                  </button>
-                </div>
-              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Event chart</div>
+              <div className="text-lg font-semibold text-foreground mt-1">{normalizedPrices[0].toFixed(2)}¢</div>
 
               <div className="mt-4 h-[360px]">
                 {chartTokenId ? (
@@ -224,159 +175,43 @@ export default function MarketDetailPage() {
             </div>
 
             <div className="surface-card rounded-2xl p-6">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Market information</div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Event information</div>
               <p className="text-sm text-muted-foreground mt-2">
-                This market resolves to "Yes" if the target event occurs before the resolution date. Trading is executed
-                atomically on the Polygon network via shared order books.
+                Analysis-only mode: we surface live event context and probability signals, then unlock structured AI analysis after x402 payment.
               </p>
             </div>
           </div>
 
-          {/* Trade Panel */}
           <div className="lg:col-span-4">
             <div className="surface-card rounded-2xl p-6 sticky top-24 space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-widest">Trade</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest">Analysis</h3>
                 <div className="flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[oklch(0.68_0.18_155)]" /> Live
+                  <span className="w-1.5 h-1.5 rounded-full bg-[oklch(0.68_0.18_155)]" /> x402
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setSelectedOutcome(0)}
-                  className={cn(
-                    "p-4 rounded-xl border transition-all text-left",
-                    selectedOutcome === 0
-                      ? "bg-[oklch(0.68_0.18_155/0.12)] border-[oklch(0.68_0.18_155/0.5)] text-[oklch(0.68_0.18_155)]"
-                      : "bg-[oklch(0.16_0.014_255)] border-[oklch(0.22_0.015_255)] text-muted-foreground"
-                  )}
-                >
-                  <span className="text-[10px] font-bold block mb-1">YES</span>
-                  <span className="text-xl font-bold">{normalizedPrices[0].toFixed(2)}¢</span>
-                </button>
-                <button
-                  onClick={() => setSelectedOutcome(1)}
-                  className={cn(
-                    "p-4 rounded-xl border transition-all text-left",
-                    selectedOutcome === 1
-                      ? "bg-[oklch(0.58_0.2_25/0.12)] border-[oklch(0.58_0.2_25/0.5)] text-[oklch(0.58_0.2_25)]"
-                      : "bg-[oklch(0.16_0.014_255)] border-[oklch(0.22_0.015_255)] text-muted-foreground"
-                  )}
-                >
-                  <span className="text-[10px] font-bold block mb-1">NO</span>
-                  <span className="text-xl font-bold">{normalizedPrices[1].toFixed(2)}¢</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSideTab("buy")}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-xs font-semibold border",
-                    sideTab === "buy"
-                      ? "bg-[oklch(0.22_0.04_82)] text-[oklch(0.78_0.16_82)] border-[oklch(0.78_0.16_82/0.4)]"
-                      : "bg-[oklch(0.16_0.014_255)] text-muted-foreground border-[oklch(0.22_0.015_255)]"
-                  )}
-                >
-                  Buy
-                </button>
-                <button
-                  onClick={() => setSideTab("sell")}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-xs font-semibold border",
-                    sideTab === "sell"
-                      ? "bg-[oklch(0.22_0.04_82)] text-[oklch(0.78_0.16_82)] border-[oklch(0.78_0.16_82/0.4)]"
-                      : "bg-[oklch(0.16_0.014_255)] text-muted-foreground border-[oklch(0.22_0.015_255)]"
-                  )}
-                >
-                  Sell
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setOrderType("market")}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-xs font-semibold border",
-                    orderType === "market"
-                      ? "bg-[oklch(0.18_0.014_255)] text-foreground border-[oklch(0.28_0.018_255)]"
-                      : "bg-[oklch(0.16_0.014_255)] text-muted-foreground border-[oklch(0.22_0.015_255)]"
-                  )}
-                >
-                  Market
-                </button>
-                <button
-                  onClick={() => setOrderType("limit")}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-xs font-semibold border",
-                    orderType === "limit"
-                      ? "bg-[oklch(0.18_0.014_255)] text-foreground border-[oklch(0.28_0.018_255)]"
-                      : "bg-[oklch(0.16_0.014_255)] text-muted-foreground border-[oklch(0.22_0.015_255)]"
-                  )}
-                >
-                  Limit
-                </button>
-              </div>
-
-              <Input
-                label="Amount (USDC)"
-                placeholder="10"
-                value={orderSize}
-                onChange={(e) => setOrderSize(e.target.value)}
-              />
-
-              <div className="grid grid-cols-4 gap-2">
-                {[10, 25, 50, 100].map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => setOrderSize(String(amt))}
-                    className="py-2 rounded-lg text-xs font-semibold bg-[oklch(0.16_0.014_255)] border border-[oklch(0.22_0.015_255)] text-muted-foreground hover:text-foreground"
-                  >
-                    ${amt}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Button
-                  className="w-full h-11"
-                  onClick={() => handleSubmit(sideTab === "buy" ? Side.BUY : Side.SELL)}
-                  disabled={tradeStatus?.includes("...")}
-                >
-                  {sideTab === "buy" ? "Buy" : "Sell"} Position
-                </Button>
-              </div>
-
-              {tradeStatus && (
-                <div className="p-3 bg-[oklch(0.16_0.014_255)] rounded-lg border border-[oklch(0.22_0.015_255)] flex items-center gap-3">
-                  <Info size={14} className="text-[oklch(0.78_0.16_82)]" />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    {tradeStatus}
-                  </span>
+              <div className="rounded-xl border border-[oklch(0.22_0.015_255)] bg-[oklch(0.16_0.014_255)] p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">No order execution here.</p>
+                <p className="text-xs text-muted-foreground">
+                  This page is optimized for paid event intelligence only.
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <Clock className="w-3.5 h-3.5" />
+                  Unlock in seconds after payment verification
                 </div>
-              )}
+              </div>
 
-              <footer className="pt-2 border-t border-[oklch(0.22_0.015_255)] space-y-2 text-[10px] text-muted-foreground">
-                <div className="flex items-center justify-between">
-                  <span>Brokerage Fee</span>
-                  <span className="text-foreground">0.00%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Network Fee</span>
-                  <span className="text-foreground">Gasless (Relayed)</span>
-                </div>
-                <div className="p-3 bg-[oklch(0.22_0.04_82/0.2)] rounded-lg border border-[oklch(0.22_0.04_82/0.4)]">
-                  <p className="text-[10px] text-[oklch(0.78_0.16_82)] font-medium leading-relaxed">
-                    Orders are matched against existing liquidity on the Polymarket CLOB.
-                  </p>
-                </div>
-              </footer>
+              <Button className="w-full h-11 gap-2" onClick={() => setAnalysisOpen(true)}>
+                <ShieldCheck className="w-4 h-4" />
+                Unlock Detailed Analysis
+              </Button>
             </div>
           </div>
         </div>
       </main>
       <Footer />
+      <AnalysisUnlockModal open={analysisOpen} market={analysisMarket} onOpenChange={setAnalysisOpen} />
     </div>
   );
 }

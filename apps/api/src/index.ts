@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { buildServer } from "./server.js";
 import { config } from "./config.js";
 
