@@ -1,9 +1,9 @@
-under# SmartMarket
+
 
 ## Monorepo Layout
 
 ```
-SmartMarket
+stellarpulse
 ├ apps
 │  ├ api             Fastify API
 │  └ web             Next.js frontend
