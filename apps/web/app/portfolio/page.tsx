@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw, Wallet, AlertCircle } from "lucide-react";
-import { ethers } from "ethers";
+import { requestAccess, getAddress, isConnected } from "@stellar/freighter-api";
 
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
@@ -27,14 +27,26 @@ export default function PortfolioPage() {
 
   const connectWallet = async () => {
     try {
-      if (typeof window === "undefined" || !(window as any).ethereum) {
-        setError("No wallet found. Install MetaMask or compatible wallet.");
+      const connected = await isConnected();
+      if (connected) {
+        const addr = await getAddress() as any;
+        const parsed = typeof addr === "string" ? addr : addr?.address;
+        if (!parsed) throw new Error("Unable to read Freighter address.");
+        setWalletAddress(parsed);
+        setError(null);
         return;
       }
-      const provider = new ethers.BrowserProvider((window as any).ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
-      setWalletAddress(await signer.getAddress());
+
+      const access = await requestAccess() as any;
+      if (access?.error) {
+        throw new Error(access.error.message || "Freighter access denied");
+      }
+
+      const address = typeof access === "string" ? access : access?.address;
+      if (!address) {
+        throw new Error("Unable to read Freighter address.");
+      }
+      setWalletAddress(address);
       setError(null);
     } catch (err: any) {
       setError(err?.message ?? "Wallet connection failed");
