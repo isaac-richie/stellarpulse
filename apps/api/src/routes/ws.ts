@@ -43,25 +43,25 @@ export async function wsRoutes(app: FastifyInstance): Promise<void> {
       sendSubscribe();
     });
 
-    upstream.on("message", (data) => {
-      if (connection.socket.readyState === connection.socket.OPEN) {
-        connection.socket.send(data.toString());
+    upstream.on("message", (data: any) => {
+      if (connection.readyState === connection.OPEN) {
+        connection.send(data.toString());
       }
     });
 
     upstream.on("close", () => {
-      if (connection.socket.readyState === connection.socket.OPEN) {
-        connection.socket.close();
+      if (connection.readyState === connection.OPEN) {
+        connection.close();
       }
     });
 
     upstream.on("error", () => {
-      if (connection.socket.readyState === connection.socket.OPEN) {
-        connection.socket.close();
+      if (connection.readyState === connection.OPEN) {
+        connection.close();
       }
     });
 
-    connection.socket.on("close", () => {
+    connection.on("close", () => {
       clearInterval(pingInterval);
       if (upstream.readyState === WebSocket.OPEN || upstream.readyState === WebSocket.CONNECTING) {
         upstream.close();
