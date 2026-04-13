@@ -16,6 +16,7 @@ import { agentRoutes } from "./routes/agent.js";
 
 export function buildServer() {
   const app = Fastify({ logger: true });
+  const isVercel = process.env.VERCEL === "1" || process.env.VERCEL === "true";
 
   app.register(cors, {
     origin: true,
@@ -38,7 +39,9 @@ export function buildServer() {
       "x-payment-response"
     ]
   });
-  app.register(websocket);
+  if (!isVercel) {
+    app.register(websocket);
+  }
 
   app.register(healthRoutes);
   app.register(kalshiRoutes);
@@ -49,7 +52,14 @@ export function buildServer() {
   app.register(clobRoutes);
   app.register(orderRoutes);
   app.register(portfolioRoutes);
-  app.register(wsRoutes);
+  if (!isVercel) {
+    app.register(wsRoutes);
+  } else {
+    app.get("/ws/orderbook", async (_req, reply) => {
+      reply.status(501);
+      return { ok: false, error: "websocket_not_supported_on_vercel" };
+    });
+  }
   app.register(catalystRoutes);
   app.register(agentRoutes);
 
