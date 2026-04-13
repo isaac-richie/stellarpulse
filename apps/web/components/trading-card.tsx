@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { BookmarkPlus, Clock, TrendingUp, Zap, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PolymarketMarket } from "@/lib/polymarket"
@@ -25,7 +24,7 @@ function formatEndDate(dateStr: string): string {
   }
 }
 
-function ProbabilityBar({ outcomes }: { outcomes: PolymarketMarket["outcomes"] }) {
+function SignalBar({ outcomes }: { outcomes: PolymarketMarket["outcomes"] }) {
   if (!outcomes || outcomes.length === 0) return null
 
   // Binary market
@@ -39,11 +38,11 @@ function ProbabilityBar({ outcomes }: { outcomes: PolymarketMarket["outcomes"] }
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-bold tracking-wider text-[oklch(0.68_0.18_155)]">
-            CONSENSUS {yes}%
+          <span className="font-bold tracking-wider text-[oklch(0.68_0.18_155)] uppercase">
+            SIGNAL {yes}%
           </span>
-          <span className="text-muted-foreground font-medium tracking-wide">
-            ALT-SIGNAL {no.toFixed(1)}%
+          <span className="text-muted-foreground font-medium tracking-wide uppercase">
+            NOISE {no.toFixed(1)}%
           </span>
         </div>
         <div className="relative h-1.5 rounded-full bg-[oklch(0.22_0.015_255)] overflow-hidden">
@@ -79,7 +78,7 @@ function ProbabilityBar({ outcomes }: { outcomes: PolymarketMarket["outcomes"] }
         </div>
       ))}
       {outcomes.length > 3 && (
-        <div className="text-xs text-muted-foreground">+{outcomes.length - 3} more outcomes</div>
+        <div className="text-xs text-muted-foreground">+{outcomes.length - 3} more vectors</div>
       )}
     </div>
   )
@@ -92,7 +91,6 @@ interface TradingCardProps {
 }
 
 export function TradingCard({ market, index, onUnlockAnalysis }: TradingCardProps) {
-  const router = useRouter()
   const [bookmarked, setBookmarked] = useState(false)
 
   const animDelay = Math.min(index * 60, 600)
@@ -102,11 +100,7 @@ export function TradingCard({ market, index, onUnlockAnalysis }: TradingCardProp
       className="card-enter group surface-card surface-card-hover rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:shadow-[0_8px_40px_oklch(0.08_0.01_260)] hover:-translate-y-0.5"
       style={{ animationDelay: `${animDelay}ms`, animationFillMode: "both" }}
       onClick={() => {
-        if (market.source === "kalshi") {
-          onUnlockAnalysis?.(market)
-          return
-        }
-        router.push(`/markets/${market.id}`)
+        onUnlockAnalysis?.(market)
       }}
     >
       {/* Card top image / gradient banner */}
@@ -166,9 +160,9 @@ export function TradingCard({ market, index, onUnlockAnalysis }: TradingCardProp
           {market.question}
         </h3>
 
-        {/* Probability bar */}
+        {/* Signal bar */}
         <div className="mt-auto">
-          <ProbabilityBar outcomes={market.outcomes} />
+          <SignalBar outcomes={market.outcomes} />
         </div>
 
         {/* Stats row */}

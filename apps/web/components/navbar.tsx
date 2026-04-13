@@ -330,7 +330,7 @@ export function Navbar() {
                       key={market.id}
                       onClick={() => {
                         setSearchOpen(false)
-                        router.push(`/markets/${market.id}`)
+                        router.push(`/?q=${encodeURIComponent(market.question)}`)
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-[oklch(0.18_0.014_255)] transition-colors"
                     >
