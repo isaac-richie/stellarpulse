@@ -3,7 +3,7 @@ import { encodePaymentRequiredHeader, encodePaymentResponseHeader } from "@x402/
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { config } from "../config.js";
-import { generateMarketAnalysis } from "../services/openai.js";
+import { generateMarketAnalysis, type AnalysisMarketInput } from "../services/openai.js";
 import {
   buildAnalysisPaymentRequired,
   buildAnalysisPaymentRequirement,
@@ -61,7 +61,20 @@ async function respondWithAnalysis(
   const payer = settlement.payer;
   const amountAtomic = requirement.amount;
   const amountUsd = config.x402.analysisPriceUsd;
-  const analysis = await generateMarketAnalysis(market, actorType);
+  const marketInput: AnalysisMarketInput = {
+    id: market.id,
+    question: market.question,
+    category: market.category,
+    description: market.description,
+    volume: market.volume,
+    liquidity: market.liquidity,
+    endDate: market.endDate,
+    outcomes: market.outcomes?.map((outcome) => ({
+      name: outcome.name,
+      price: outcome.price
+    }))
+  };
+  const analysis = await generateMarketAnalysis(marketInput, actorType);
   reply.header(
     "PAYMENT-RESPONSE",
     encodePaymentResponseHeader({

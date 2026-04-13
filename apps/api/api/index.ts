@@ -9,7 +9,8 @@ async function getHandler() {
 
   const app = buildServer();
   await app.ready();
-  cachedHandler = serverless(app);
+  // Fastify instances are compatible at runtime; cast keeps Vercel's TS builder happy.
+  cachedHandler = serverless(app as any);
   return cachedHandler;
 }
 
