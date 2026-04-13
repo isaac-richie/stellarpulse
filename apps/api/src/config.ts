@@ -18,6 +18,8 @@ export const config = {
     assetDecimals: Number(process.env.X402_ASSET_DECIMALS ?? 7),
     resourceBaseUrl: process.env.X402_RESOURCE_BASE_URL ?? `http://localhost:${Number(process.env.PORT ?? 4000)}`,
     maxTimeoutSeconds: Number(process.env.X402_MAX_TIMEOUT_SECONDS ?? 300),
+    facilitatorRequestTimeoutMs: Number(process.env.X402_FACILITATOR_TIMEOUT_MS ?? 5000),
+    facilitatorRetries: Number(process.env.X402_FACILITATOR_RETRIES ?? 1),
     settleOnUnlock: (process.env.X402_SETTLE_ON_UNLOCK ?? "true") !== "false",
     facilitatorApiKey: process.env.X402_FACILITATOR_API_KEY ?? "",
     agentPrivateKey: process.env.X402_AGENT_STELLAR_PRIVATE_KEY ?? "",

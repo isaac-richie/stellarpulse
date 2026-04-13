@@ -94,9 +94,13 @@ function facilitatorHeaders() {
   return headers;
 }
 
-async function postFacilitator(path: "/verify" | "/settle", payload: Record<string, unknown>, attempts = 3): Promise<{ status: number; data: any }> {
+async function postFacilitator(
+  path: "/verify" | "/settle",
+  payload: Record<string, unknown>,
+  attempts = Math.max(1, config.x402.facilitatorRetries)
+): Promise<{ status: number; data: any }> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+  const timeout = setTimeout(() => controller.abort(), config.x402.facilitatorRequestTimeoutMs);
   try {
     const res = await fetch(`${config.x402.verifierUrl}${path}`, {
       method: "POST",
@@ -110,8 +114,10 @@ async function postFacilitator(path: "/verify" | "/settle", payload: Record<stri
     if (err.name === "AbortError") {
       return { status: 408, data: { error: "request_timeout" } };
     }
-    // Handle Undici 'other side closed' SocketErrors by retrying
-    if (attempts > 1 && err.message?.includes("other side closed") || err.name === "TypeError") {
+    // Handle transient network errors by retrying a bounded number of times.
+    const isTransientSocketDrop = typeof err?.message === "string" && err.message.includes("other side closed");
+    const isTransientFetchTypeError = err?.name === "TypeError";
+    if (attempts > 1 && (isTransientSocketDrop || isTransientFetchTypeError)) {
       console.warn(`[x402] Facilitator socket dropped (${err.message}). Retrying...`);
       return postFacilitator(path, payload, attempts - 1);
     }
