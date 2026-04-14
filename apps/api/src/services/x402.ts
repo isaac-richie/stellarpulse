@@ -263,7 +263,7 @@ export async function checkStellarPaymentReadiness(address: string): Promise<Ste
   const horizonBase = getHorizonBaseUrl(network).replace(/\/+$/, "");
   const accountRes = await fetchWithTimeout(`${horizonBase}/accounts/${address}`, {
     headers: { Accept: "application/json" }
-  }, 5000);
+  }, config.x402.horizonRequestTimeoutMs);
 
   if (accountRes.status === 404) {
     return {
@@ -342,17 +342,34 @@ export async function getAgentStellarStatus(): Promise<{
   
   try {
     const horizonBase = getHorizonBaseUrl(network).replace(/\/+$/, "");
-    const res = await fetchWithTimeout(`${horizonBase}/accounts/${address}`, {}, 5000);
+    const res = await fetchWithTimeout(`${horizonBase}/accounts/${address}`, {
+      headers: { Accept: "application/json" }
+    }, config.x402.horizonRequestTimeoutMs);
     if (!res.ok) {
       return { address, balances: [], network, ready: false, usdcIssuer, usdcAssetCode };
     }
     const account = await res.json();
-    const readiness = await checkStellarPaymentReadiness(address);
+    const balances: any[] = Array.isArray(account?.balances) ? account.balances : [];
+    const hasTrustline = !!usdcIssuer && balances.some((balance) => (
+      balance?.asset_type !== "native"
+        && String(balance?.asset_code ?? "").toUpperCase() === usdcAssetCode.toUpperCase()
+        && String(balance?.asset_issuer ?? "") === usdcIssuer
+    ));
+    const usdcBalance = hasTrustline
+      ? parseFloat(
+        balances.find((balance) => (
+          balance?.asset_type !== "native"
+            && String(balance?.asset_code ?? "").toUpperCase() === usdcAssetCode.toUpperCase()
+            && String(balance?.asset_issuer ?? "") === usdcIssuer
+        ))?.balance ?? "0"
+      )
+      : 0;
+    const ready = !!hasTrustline && usdcBalance >= config.x402.analysisPriceUsd;
     return {
       address,
-      balances: account.balances ?? [],
+      balances,
       network,
-      ready: readiness.ready,
+      ready,
       usdcIssuer,
       usdcAssetCode
     };

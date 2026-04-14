@@ -145,20 +145,33 @@ export function AgentEconomicHud() {
   const [error, setError] = useState<string | null>(null)
   const [pulseActivity, setPulseActivity] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const refreshInFlightRef = useRef(false)
+
+  const fetchWithTimeout = useCallback(async (url: string, timeoutMs = 8000) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      return await fetch(url, { signal: controller.signal })
+    } finally {
+      clearTimeout(timer)
+    }
+  }, [])
 
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/agent/profile`)
+      const res = await fetchWithTimeout(`${API_BASE}/agent/profile`)
+      if (!res.ok) return
       const data = await res.json()
       if (data.ok) setProfile(data.agent)
     } catch {
       /* swallow */
     }
-  }, [])
+  }, [fetchWithTimeout])
 
   const fetchLedger = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/agent/ledger?limit=15`)
+      const res = await fetchWithTimeout(`${API_BASE}/agent/ledger?limit=15`)
+      if (!res.ok) return
       const data = await res.json()
       if (data.ok) {
         // Detect new entries for pulse animation
@@ -172,9 +185,11 @@ export function AgentEconomicHud() {
     } catch {
       /* swallow */
     }
-  }, [ledger])
+  }, [fetchWithTimeout, ledger])
 
   const refresh = useCallback(async () => {
+    if (refreshInFlightRef.current) return
+    refreshInFlightRef.current = true
     setLoading(true)
     setError(null)
     try {
@@ -182,6 +197,7 @@ export function AgentEconomicHud() {
     } catch {
       setError("Failed to refresh")
     } finally {
+      refreshInFlightRef.current = false
       setLoading(false)
     }
   }, [fetchProfile, fetchLedger])

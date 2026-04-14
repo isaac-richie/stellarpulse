@@ -100,7 +100,7 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
       const paymentsRes = await fetchWithTimeout(
         `${horizonBase.replace(/\/+$/, "")}/accounts/${address}/payments?limit=${limit}&order=desc`,
         { headers: { Accept: "application/json" } },
-        5000
+        config.x402.horizonRequestTimeoutMs
       );
 
       if (!paymentsRes.ok) {

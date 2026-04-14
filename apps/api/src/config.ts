@@ -25,6 +25,7 @@ export const config = {
     agentPrivateKey: process.env.X402_AGENT_STELLAR_PRIVATE_KEY ?? "",
     horizonTestnetUrl: process.env.X402_HORIZON_TESTNET_URL ?? "https://horizon-testnet.stellar.org",
     horizonPubnetUrl: process.env.X402_HORIZON_PUBNET_URL ?? "https://horizon.stellar.org",
+    horizonRequestTimeoutMs: Number(process.env.X402_HORIZON_TIMEOUT_MS ?? 3000),
     usdcAssetCode: process.env.X402_STELLAR_USDC_ASSET_CODE ?? "USDC",
     usdcIssuerTestnet: process.env.X402_STELLAR_USDC_ISSUER_TESTNET ?? "",
     usdcIssuerPubnet: process.env.X402_STELLAR_USDC_ISSUER_PUBNET ?? ""
