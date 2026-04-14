@@ -19,11 +19,28 @@ export function buildServer() {
   const isVercel = process.env.VERCEL === "1" || process.env.VERCEL === "true";
 
   app.register(cors, {
-    origin: [
-      "https://stellarpulse-web.vercel.app",
-      "https://stellarpulse-api.vercel.app",
-      "https://stellarpulse.vercel.app"
-    ],
+    origin: (origin, cb) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+      
+      const allowedPatterns = [
+        /^https:\/\/.*\.vercel\.app$/,
+        /^http:\/\/localhost:\d+$/
+      ];
+
+      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+      
+      if (isAllowed) {
+        cb(null, true);
+      } else {
+        // Log the rejected origin for debugging
+        app.log.warn(`[CORS] Rejected origin: ${origin}`);
+        cb(null, false);
+      }
+    },
     allowedHeaders: [
       "Content-Type",
       "Authorization",
