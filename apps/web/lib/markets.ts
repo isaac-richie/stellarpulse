@@ -1,6 +1,18 @@
 import { fetchKalshiMarkets } from "./kalshi"
 import { fetchPolymarketMarkets, type PolymarketMarket } from "./polymarket"
 
+const PROVIDER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_MARKETS_TIMEOUT_MS ?? 12000)
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), timeoutMs)
+    promise
+      .then((value) => resolve(value))
+      .catch(() => resolve(fallback))
+      .finally(() => clearTimeout(timer))
+  })
+}
+
 function volumeToNumber(volume: string): number {
   const normalized = volume.replace(/\$/g, "").trim().toUpperCase()
   if (!normalized) return 0
@@ -30,8 +42,10 @@ export async function fetchMarkets(
 ): Promise<PolymarketMarket[]> {
   const includeKalshi = (process.env.NEXT_PUBLIC_ENABLE_KALSHI ?? "true") !== "false"
   const requests = [
-    fetchPolymarketMarkets(category, limit, sortBy, offset, search),
-    includeKalshi ? fetchKalshiMarkets(category ?? "all", limit, sortBy, offset, search) : Promise.resolve([])
+    withTimeout(fetchPolymarketMarkets(category, limit, sortBy, offset, search), PROVIDER_TIMEOUT_MS, []),
+    includeKalshi
+      ? withTimeout(fetchKalshiMarkets(category ?? "all", limit, sortBy, offset, search), PROVIDER_TIMEOUT_MS, [])
+      : Promise.resolve([])
   ]
 
   const [polyResult, kalshiResult] = await Promise.allSettled(requests)
