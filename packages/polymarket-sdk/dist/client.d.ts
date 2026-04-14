@@ -1,6 +1,7 @@
 import type { BridgeDepositRequest, BridgeQuoteRequest, BridgeWithdrawRequest, PolymarketConfig } from "@smartmarket/types";
 export declare class PolymarketClient {
     private config;
+    private timeoutMs;
     constructor(config: PolymarketConfig);
     getGeoblockStatus(): Promise<unknown>;
     getSupportedAssets(): Promise<unknown>;
@@ -15,6 +16,7 @@ export declare class PolymarketClient {
     clobAuth(path: string, headers: Record<string, string>): Promise<unknown>;
     clobCreateApiKey(headers: Record<string, string>): Promise<unknown>;
     private withQuery;
+    private fetchWithTimeout;
     private getJson;
     private postJson;
 }

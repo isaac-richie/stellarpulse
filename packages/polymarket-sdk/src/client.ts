@@ -7,9 +7,11 @@ import type {
 
 export class PolymarketClient {
   private config: PolymarketConfig;
+  private timeoutMs: number;
 
   constructor(config: PolymarketConfig) {
     this.config = config;
+    this.timeoutMs = Number(process.env.POLYMARKET_REQUEST_TIMEOUT_MS ?? 8000);
   }
 
   async getGeoblockStatus(): Promise<unknown> {
@@ -70,14 +72,29 @@ export class PolymarketClient {
     return suffix ? `${url}?${suffix}` : url;
   }
 
+  private async fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        throw new Error(`request_timeout:${this.timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   private async getJson(url: string): Promise<unknown> {
-    const res = await fetch(url);
+    const res = await this.fetchWithTimeout(url);
     if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     return res.json();
   }
 
   private async postJson(url: string, payload?: unknown, headers: Record<string, string> = {}): Promise<unknown> {
-    const res = await fetch(url, {
+    const res = await this.fetchWithTimeout(url, {
       method: "POST",
       headers: {
         "content-type": payload ? "application/json" : "text/plain",
