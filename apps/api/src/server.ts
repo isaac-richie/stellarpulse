@@ -19,7 +19,11 @@ export function buildServer() {
   const isVercel = process.env.VERCEL === "1" || process.env.VERCEL === "true";
 
   app.register(cors, {
-    origin: true,
+    origin: [
+      "https://stellarpulse-web.vercel.app",
+      "https://stellarpulse-api.vercel.app",
+      "https://stellarpulse.vercel.app"
+    ],
     allowedHeaders: [
       "Content-Type",
       "Authorization",

@@ -94,24 +94,37 @@ function facilitatorHeaders() {
   return headers;
 }
 
+export async function fetchWithTimeout(url: string, options: any = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new Error(`fetch_timeout:${url}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function postFacilitator(
   path: "/verify" | "/settle",
   payload: Record<string, unknown>,
   attempts = Math.max(1, config.x402.facilitatorRetries)
 ): Promise<{ status: number; data: any }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.x402.facilitatorRequestTimeoutMs);
   try {
-    const res = await fetch(`${config.x402.verifierUrl}${path}`, {
+    const res = await fetchWithTimeout(`${config.x402.verifierUrl}${path}`, {
       method: "POST",
       headers: facilitatorHeaders(),
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
+      body: JSON.stringify(payload)
+    }, config.x402.facilitatorRequestTimeoutMs);
     const data = await res.json().catch(() => ({}));
     return { status: res.status, data };
   } catch (err: any) {
-    if (err.name === "AbortError") {
+    if (err.message?.includes("fetch_timeout")) {
       return { status: 408, data: { error: "request_timeout" } };
     }
     // Handle transient network errors by retrying a bounded number of times.
@@ -122,8 +135,6 @@ async function postFacilitator(
       return postFacilitator(path, payload, attempts - 1);
     }
     throw err;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -250,9 +261,9 @@ export async function createAgentPaymentHeader(
 export async function checkStellarPaymentReadiness(address: string): Promise<StellarReadiness> {
   const network = normalizeStellarNetwork(config.x402.network);
   const horizonBase = getHorizonBaseUrl(network).replace(/\/+$/, "");
-  const accountRes = await fetch(`${horizonBase}/accounts/${address}`, {
+  const accountRes = await fetchWithTimeout(`${horizonBase}/accounts/${address}`, {
     headers: { Accept: "application/json" }
-  });
+  }, 5000);
 
   if (accountRes.status === 404) {
     return {
@@ -331,7 +342,7 @@ export async function getAgentStellarStatus(): Promise<{
   
   try {
     const horizonBase = getHorizonBaseUrl(network).replace(/\/+$/, "");
-    const res = await fetch(`${horizonBase}/accounts/${address}`);
+    const res = await fetchWithTimeout(`${horizonBase}/accounts/${address}`, {}, 5000);
     if (!res.ok) {
       return { address, balances: [], network, ready: false, usdcIssuer, usdcAssetCode };
     }

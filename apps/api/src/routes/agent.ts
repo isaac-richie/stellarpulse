@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { config } from "../config.js";
-import { getAgentStellarStatus } from "../services/x402.js";
+import { getAgentStellarStatus, fetchWithTimeout } from "../services/x402.js";
 import { Keypair } from "@stellar/stellar-sdk";
 
 interface HorizonPayment {
@@ -96,10 +96,11 @@ export async function agentRoutes(app: FastifyInstance): Promise<void> {
         ? config.x402.horizonTestnetUrl
         : config.x402.horizonPubnetUrl;
 
-      // Fetch recent payments from Horizon
-      const paymentsRes = await fetch(
+      // Fetch recent payments from Horizon with strict timeout
+      const paymentsRes = await fetchWithTimeout(
         `${horizonBase.replace(/\/+$/, "")}/accounts/${address}/payments?limit=${limit}&order=desc`,
-        { headers: { Accept: "application/json" } }
+        { headers: { Accept: "application/json" } },
+        5000
       );
 
       if (!paymentsRes.ok) {
