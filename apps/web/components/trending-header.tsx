@@ -20,6 +20,46 @@ function formatEndDate(dateStr?: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
 }
 
+function parseMonetaryString(str?: string) {
+  if (!str) return 0;
+  const clean = str.replace(/[^0-9.MK]/g, '');
+  let val = Number.parseFloat(clean);
+  if (clean.includes('M')) val *= 1000000;
+  else if (clean.includes('K')) val *= 1000;
+  return Number.isNaN(val) ? 0 : val;
+}
+
+function getNarrativePositioning(value: number) {
+  if (value > 70) return "Strong Alignment";
+  if (value > 55) return "Leaning Positive";
+  if (value > 45) return "Fragmented";
+  if (value > 30) return "Leaning Negative";
+  return "Weak Alignment";
+}
+
+function getAttentionFlow(flowStr?: string) {
+  const flow = parseMonetaryString(flowStr);
+  if (flow > 10000000) return "High Attention";
+  if (flow > 1000000) return "Moderate Activity";
+  return "Low Activity";
+}
+
+function getSignalDepth(depthStr?: string) {
+  const depth = parseMonetaryString(depthStr);
+  if (depth > 50000) return "Dense Signals";
+  if (depth > 10000) return "Moderate Depth";
+  return "Shallow Signals";
+}
+
+function getNarrativeState(market: PolymarketMarket, price: number) {
+  const flow = parseMonetaryString(market.volume);
+  if (flow > 5000000) return "Escalating";
+  if (flow > 1000000) return "Emerging";
+  if (price > 80 || price < 20) return "Stabilizing";
+  if (price > 40 && price < 60) return "Volatile";
+  return "Fragmenting";
+}
+
 interface TrendingHeaderProps {
   onUnlockAnalysis: (market: PolymarketMarket) => void
 }
@@ -113,11 +153,12 @@ export function TrendingHeader({ onUnlockAnalysis }: TrendingHeaderProps) {
 
         <div className="surface-card rounded-2xl overflow-hidden border border-[oklch(0.22_0.015_255)]">
           <div className="h-px gold-line" />
-          <div className="hidden lg:grid grid-cols-[1.2fr_0.3fr_0.35fr_0.35fr_0.35fr_0.35fr] gap-4 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground bg-[oklch(0.16_0.014_255)]">
+          <div className="hidden lg:grid grid-cols-[1fr_0.4fr_0.35fr_0.35fr_0.3fr_0.2fr_0.35fr] gap-4 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground bg-[oklch(0.16_0.014_255)]">
             <span>Intelligence Asset</span>
-            <span>Consensus</span>
-            <span>M2M Flow</span>
-            <span>Agency Depth</span>
+            <span>Narrative Positioning</span>
+            <span>Attention Flow</span>
+            <span>Signal Depth</span>
+            <span>Narrative State</span>
             <span>End Date</span>
             <span className="text-right">Execution</span>
           </div>
@@ -132,7 +173,7 @@ export function TrendingHeader({ onUnlockAnalysis }: TrendingHeaderProps) {
                 return (
                   <div
                     key={market.id}
-                    className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.3fr_0.35fr_0.35fr_0.35fr_0.35fr] gap-4 px-5 py-4 items-center hover:bg-[oklch(0.16_0.014_255)] transition-colors row-hover-accent"
+                    className="grid grid-cols-1 lg:grid-cols-[1fr_0.4fr_0.35fr_0.35fr_0.3fr_0.2fr_0.35fr] gap-4 px-5 py-4 items-center hover:bg-[oklch(0.16_0.014_255)] transition-colors row-hover-accent"
                   >
                     <div className="flex items-center gap-3">
                       {market.image ? (
@@ -150,13 +191,28 @@ export function TrendingHeader({ onUnlockAnalysis }: TrendingHeaderProps) {
                       </div>
                     </div>
 
-                    <div className={cn("text-sm font-semibold", isUp ? "text-[oklch(0.68_0.18_155)]" : "text-[oklch(0.58_0.2_25)]")}>
-                      {index.toFixed(1)}¢
+                    <div>
+                      <div className={cn("text-xs font-semibold uppercase tracking-wider mb-0.5", isUp ? "text-[oklch(0.68_0.18_155)]" : "text-[oklch(0.58_0.2_25)]")}>{getNarrativePositioning(index)}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{index.toFixed(1)}¢ Alignment</div>
                     </div>
 
-                    <div className="text-sm font-mono text-muted-foreground">{market.volume}</div>
-                    <div className="text-sm font-mono text-muted-foreground">{market.liquidity}</div>
-                    <div className="text-xs text-muted-foreground">{formatEndDate(market.endDate)}</div>
+                    <div>
+                       <div className="text-xs font-semibold text-foreground mb-0.5">{getAttentionFlow(market.volume)}</div>
+                       <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">{market.volume} Flow</div>
+                    </div>
+
+                    <div>
+                       <div className="text-xs font-semibold text-foreground mb-0.5">{getSignalDepth(market.liquidity)}</div>
+                       <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">{market.liquidity} Depth</div>
+                    </div>
+
+                    <div>
+                       <div className="inline-flex items-center px-2 py-1 rounded bg-[oklch(0.18_0.014_255)] border border-[oklch(0.22_0.015_255)] text-[10px] font-bold text-[oklch(0.78_0.16_82)] uppercase tracking-widest">
+                          {getNarrativeState(market, index)}
+                       </div>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground uppercase">{formatEndDate(market.endDate)}</div>
 
                     <div className="flex items-center gap-2 justify-end">
                       <button 

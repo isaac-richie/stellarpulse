@@ -7,8 +7,18 @@ let cachedHandler: ReturnType<typeof serverless> | null = null;
 async function getHandler() {
   if (cachedHandler) return cachedHandler;
 
+  console.log("[server] Starting server initialization...");
+  const start = Date.now();
+  
   const app = buildServer();
-  await app.ready();
+  try {
+    await app.ready();
+    console.log(`[server] Ready in ${Date.now() - start}ms`);
+  } catch (err) {
+    console.error("[server] Failed to initialize Fastify:", err);
+    throw err;
+  }
+
   // Fastify instances are compatible at runtime; cast keeps Vercel's TS builder happy.
   cachedHandler = serverless(app as any);
   return cachedHandler;
